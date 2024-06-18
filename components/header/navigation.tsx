@@ -54,7 +54,7 @@ export default function Navigation() {
         </NavbarBrand>
       </NavbarContent>
 
-      <NavbarContent className="hidden sm:flex" style={{ flexGrow: 4, justifyContent: 'center', gap: '4rem' }} >
+      <NavbarContent className="hidden sm:flex" style={{ flexGrow: 2, justifyContent: 'center', gap: '4rem' }} >
         <NavbarItem>
           <Link href="/" color="foreground">
             Home
