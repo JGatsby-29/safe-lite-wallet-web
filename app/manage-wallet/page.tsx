@@ -9,6 +9,7 @@ import { ethers } from "ethers";
 import { isAddress } from "web3-validator";
 import { useSafeLite } from "@/hooks/useSafeLite";
 import { Input, Button } from "@nextui-org/react";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@nextui-org/react";
 
 export default function ManageWallet() {
     const { data: walletClient, isError, isLoading } = useWalletClient()
@@ -16,12 +17,18 @@ export default function ManageWallet() {
     const result = useWaitForTransactionReceipt({
         hash: safeLiteDeployTxHash as `0x${string}`,
     })
-    const [threshold, setThreshold] = useState(0)
     const [owners, setOwners] = useState<`0x${string}`[]>([])
     const safeLite = useSafeLite(result?.data?.contractAddress ? result?.data?.contractAddress : undefined)
     const safeLiteWallet = useSafeLite()
     const [multiSigInput, setMultiSigInput] = useState('');
     const [balance, setBalance] = useState(0)
+    const { isOpen: addSignerModalOpen, onOpen: onOpenAddSignerModal, onClose: onCloseAddSignerModal } = useDisclosure();
+    const { isOpen: removeSignerModalOpen, onOpen: onOpenRemoveSignerModal, onClose: onCloseRemoveSignerModal } = useDisclosure();
+
+    const [newSigner, setNewSigner] = useState('');
+    const [newThreshold, setNewThreshold] = useState('');
+    const [existingSigner, setExistingSigner] = useState('');
+    const [newThreshold2, setNewThreshold2] = useState('');
 
     const inquiryHandler = async () => {
         const balance = await readContract(config, {
@@ -42,7 +49,7 @@ export default function ManageWallet() {
             functionName: 'getOwners',
             args: [],
         }) as `0x${string}`[];
-        
+
         console.log(owners);
         setOwners(owners);
     };
@@ -52,6 +59,100 @@ export default function ManageWallet() {
             <Input size="lg" variant="bordered" color="success" type="text" label={`new Signer ${index + 1}`} value={owner} />
         </div>
     ));
+
+    const addSignerExeTx = async () => {
+        const nonce = await readContract(config, {
+            abi: safeLiteAbi.abi,
+            address: multiSigInput as `0x${string}`,
+            functionName: 'nonce',
+            args: [],
+        });
+        console.log("nonce is", nonce)
+
+        const safeLiteInterface = new ethers.utils.Interface(safeLiteAbi.abi);
+
+        const data = safeLiteInterface.encodeFunctionData("addSigner", [newSigner, Number(newThreshold)]);
+        console.log("Encoded data is: ", data);
+
+        const hash = await readContract(config, {   
+            abi: safeLiteAbi.abi,
+            address: multiSigInput as `0x${string}`,
+            functionName: 'getTransactionHash',
+            args: [Number(nonce), multiSigInput, 0, data],
+        }) as `0x${string}`
+
+        const signatureCount = await readContract(config, {
+            abi: safeLiteAbi.abi,
+            address: multiSigInput as `0x${string}`,
+            functionName: 'getSignatureCount',
+            args: [Number(nonce)],
+        });
+        console.log("signatureCount is: ", signatureCount);
+
+        const signature = await walletClient?.signMessage({
+            message: { raw: hash },
+        });
+
+        const executeTransaction = await walletClient?.writeContract({
+            abi: safeLiteAbi.abi,
+            address: multiSigInput as `0x${string}`,
+            functionName: 'signTransaction',
+            args: [
+                Number(nonce),
+                multiSigInput,
+                0,
+                data,
+                signature,
+            ],
+        });
+    };
+
+    const removeSignerExeTx = async () => {
+        const nonce = await readContract(config, {
+            abi: safeLiteAbi.abi,
+            address: multiSigInput as `0x${string}`,
+            functionName: 'nonce',
+            args: [],
+        });
+        console.log("nonce is", nonce)
+
+        const safeLiteInterface = new ethers.utils.Interface(safeLiteAbi.abi);
+
+        const data = safeLiteInterface.encodeFunctionData("removeSigner", [newSigner, Number(newThreshold)]);
+        console.log("Encoded data is: ", data);
+
+        const hash = await readContract(config, {   
+            abi: safeLiteAbi.abi,
+            address: multiSigInput as `0x${string}`,
+            functionName: 'getTransactionHash',
+            args: [Number(nonce), multiSigInput, 0, data],
+        }) as `0x${string}`
+
+        const signatureCount = await readContract(config, {
+            abi: safeLiteAbi.abi,
+            address: multiSigInput as `0x${string}`,
+            functionName: 'getSignatureCount',
+            args: [Number(nonce)],
+        });
+        console.log("signatureCount is: ", signatureCount);
+
+        const signature = await walletClient?.signMessage({
+            message: { raw: hash },
+        });
+
+        const executeTransaction = await walletClient?.writeContract({
+            abi: safeLiteAbi.abi,
+            address: multiSigInput as `0x${string}`,
+            functionName: 'signTransaction',
+            args: [
+                Number(nonce),
+                multiSigInput,
+                0,
+                data,
+                signature,
+            ],
+        });
+    };
 
     return (
         <div style={{ backgroundColor: '#121312', minHeight: '100vh' }}>
@@ -86,16 +187,98 @@ export default function ManageWallet() {
                                 <div id="owners-container" style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 10, display: 'inline-flex' }}>
                                     {ownersInputs}
                                     <div style={{ display: 'flex', gap: 10 }}>
-                                        <Button color="success" variant="shadow" className="text-white" onClick={() => {
-                                            setOwners(owners.concat('' as `0x${string}`))
-                                        }}>
-                                            + Add new Signer
+                                        <Button onPress={onOpenAddSignerModal} color="success" variant="shadow" className="text-white" >
+                                            Add new Signer
                                         </Button>
-                                        <Button color="danger" variant="shadow" className="text-white" onClick={() => {
-                                            setOwners(owners.slice(0, -1))
-                                        }}>
-                                            - Delete Signer
+                                        <Modal
+                                            isOpen={addSignerModalOpen}
+                                            onOpenChange={onCloseAddSignerModal}
+                                            placement="top-center"
+                                        >
+                                            <ModalContent>
+                                                {(onClose) => (
+                                                    <>
+                                                        <ModalHeader className="flex flex-col gap-1">Add new Signer</ModalHeader>
+                                                        <ModalBody>
+                                                            <Input
+                                                                autoFocus
+                                                                label="new Singer"
+                                                                placeholder="Write new Singer address"
+                                                                variant="bordered"
+                                                                value={newSigner}
+                                                                onChange={(e) => setNewSigner(e.target.value)}
+                                                            />
+                                                            <Input
+                                                                label="threshold"
+                                                                placeholder="Write new Threshold"
+                                                                variant="bordered"
+                                                                value={newThreshold}
+                                                                onChange={(e) => setNewThreshold(e.target.value)}
+                                                            />
+                                                            <div className="flex py-2 px-1 justify-between">
+                                                            </div>
+                                                        </ModalBody>
+                                                        <ModalFooter>
+                                                            <Button color="danger" variant="flat" onPress={onClose}>
+                                                                Close
+                                                            </Button>
+                                                            <Button color="success" variant="shadow" className="text-white" onPress={() => {
+                                                                addSignerExeTx();
+                                                                onClose();
+                                                            }}>
+                                                                exeTx
+                                                            </Button>
+                                                        </ModalFooter>
+                                                    </>
+                                                )}
+                                            </ModalContent>
+                                        </Modal>
+                                        <Button onPress={onOpenRemoveSignerModal} color="danger" variant="shadow" className="text-white" >
+                                            Delete existing Signer
                                         </Button>
+                                        <Modal
+                                            isOpen={removeSignerModalOpen}
+                                            onOpenChange={onCloseRemoveSignerModal}
+                                            placement="top-center"
+                                        >
+                                            <ModalContent>
+                                                {(onClose) => (
+                                                    <>
+                                                        <ModalHeader className="flex flex-col gap-1">Delete existing Signer</ModalHeader>
+                                                        <ModalBody>
+                                                            <Input
+                                                                autoFocus
+                                                                label="existing Singer"
+                                                                placeholder="Write existing Singer address"
+                                                                variant="bordered"
+                                                                value={existingSigner}
+                                                                onChange={(e) => setExistingSigner(e.target.value)}
+                                                            />
+                                                            <Input
+                                                                label="threshold"
+                                                                placeholder="Write new Threshold"
+                                                                variant="bordered"
+                                                                value={newThreshold2}
+                                                                onChange={(e) => setNewThreshold2(e.target.value)}
+                                                            />
+                                                            <div className="flex py-2 px-1 justify-between">
+                                                            </div>
+                                                        </ModalBody>
+                                                        <ModalFooter>
+                                                            <Button color="danger" variant="flat" onPress={onClose}>
+                                                                Close
+                                                            </Button>
+                                                            <Button color="success" variant="shadow" className="text-white" onPress={() => {
+                                                                removeSignerExeTx();
+                                                                onClose();
+                                                            }}>
+                                                                exeTx
+                                                            </Button>
+                                                        </ModalFooter>
+                                                    </>
+                                                )}
+                                            </ModalContent>
+                                        </Modal>
                                     </div>
                                 </div>
                             </div>
