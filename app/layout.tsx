@@ -10,8 +10,11 @@ const outfit = Outfit({
 });
 
 export const metadata = {
-  title: 'safeLite',
-  description: 'Multisig wallet dapp',
+  title: 'Kaia SafeLite',
+  description: 'Kaia Multisig wallet dapp',
+  icons: {
+		icon: "/favicon.png",
+	},
 }
 
 export default function RootLayout({
