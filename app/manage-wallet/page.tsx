@@ -202,14 +202,14 @@ export default function ManageWallet() {
                                                         <ModalBody>
                                                             <Input
                                                                 autoFocus
-                                                                label="new Singer"
+                                                                label="New Singer"
                                                                 placeholder="Write new Singer address"
                                                                 variant="bordered"
                                                                 value={newSigner}
                                                                 onChange={(e) => setNewSigner(e.target.value)}
                                                             />
                                                             <Input
-                                                                label="threshold"
+                                                                label="Threshold"
                                                                 placeholder="Write new Threshold"
                                                                 variant="bordered"
                                                                 value={newThreshold}
@@ -219,7 +219,7 @@ export default function ManageWallet() {
                                                             </div>
                                                         </ModalBody>
                                                         <ModalFooter>
-                                                            <Button color="danger" variant="flat" onPress={onClose}>
+                                                            <Button color="default" variant="flat" onPress={onClose}>
                                                                 Close
                                                             </Button>
                                                             <Button color="success" variant="shadow" className="text-white" onPress={() => {
@@ -234,7 +234,7 @@ export default function ManageWallet() {
                                             </ModalContent>
                                         </Modal>
                                         <Button onPress={onOpenRemoveSignerModal} color="danger" variant="shadow" className="text-white" >
-                                            Delete existing Signer
+                                            Remove existing Signer
                                         </Button>
                                         <Modal
                                             isOpen={removeSignerModalOpen}
@@ -244,18 +244,18 @@ export default function ManageWallet() {
                                             <ModalContent>
                                                 {(onClose) => (
                                                     <>
-                                                        <ModalHeader className="flex flex-col gap-1">Delete existing Signer</ModalHeader>
+                                                        <ModalHeader className="flex flex-col gap-1">Remove existing Signer</ModalHeader>
                                                         <ModalBody>
                                                             <Input
                                                                 autoFocus
-                                                                label="existing Singer"
+                                                                label="Existing Singer"
                                                                 placeholder="Write existing Singer address"
                                                                 variant="bordered"
                                                                 value={existingSigner}
                                                                 onChange={(e) => setExistingSigner(e.target.value)}
                                                             />
                                                             <Input
-                                                                label="threshold"
+                                                                label="Threshold"
                                                                 placeholder="Write new Threshold"
                                                                 variant="bordered"
                                                                 value={newThreshold2}
@@ -265,7 +265,7 @@ export default function ManageWallet() {
                                                             </div>
                                                         </ModalBody>
                                                         <ModalFooter>
-                                                            <Button color="danger" variant="flat" onPress={onClose}>
+                                                            <Button color="default" variant="flat" onPress={onClose}>
                                                                 Close
                                                             </Button>
                                                             <Button color="success" variant="shadow" className="text-white" onPress={() => {
