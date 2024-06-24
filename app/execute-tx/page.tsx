@@ -16,13 +16,13 @@ export default function ExecuteTx() {
     const [toInput, setTo] = useState('');
     const [valueInput, setValue] = useState('');
     const [signature, setSignature] = useState('');
-    const [transactions, setTransactions] = useState([]);
+    const [transactions, setTransactions] = useState<never[]>([]);
     const [error, setError] = useState('');
 
     const signTxHandler = async () => {
         const nonce = await readContract(config, {
             abi: safeLiteAbi.abi,
-            address: multiSigInput,
+            address: multiSigInput as `0x${string}`,
             functionName: 'nonce',
             args: [],
         });
@@ -30,10 +30,10 @@ export default function ExecuteTx() {
 
         const hash = await readContract(config, {
             abi: safeLiteAbi.abi,
-            address: multiSigInput,
+            address: multiSigInput as `0x${string}`,
             functionName: 'getTransactionHash',
             args: [Number(nonce), toInput, ethers.utils.parseEther(valueInput), ""],
-        });
+        }) as `0x${string}`
         // console.log("Transaction hash fetched: ", hash);
         // console.log("nonce is", nonce)
         // console.log("walletClient?.account.address: ", walletClient?.account.address);
@@ -49,12 +49,12 @@ export default function ExecuteTx() {
     };
 
     const getTransactionInfoHandler = async () => {
-        const nonce = await readContract(config, {
+        const nonce = Number(await readContract(config, {
             abi: safeLiteAbi.abi,
-            address: multiSigInput,
+            address: multiSigInput as `0x${string}`,
             functionName: 'nonce',
             args: [],
-        });
+        }));
         console.log("nonce is", nonce)
 
         /*const transaction = await readContract(config, {
@@ -66,16 +66,16 @@ export default function ExecuteTx() {
         console.log("Transaction info: ", transaction);
         setTransactionInfo(transaction);*/
 
-        const txs = [];
+        const txs: never[] = [];
         for (let i = 0; i < nonce; i++) {
             const transaction = await readContract(config, {
                 abi: safeLiteAbi.abi,
-                address: multiSigInput,
+                address: multiSigInput as `0x${string}`,
                 functionName: 'getTransaction',
                 args: [i],
-            });
+            }) as [string, ethers.BigNumber, string, boolean, ethers.BigNumber];
             if (transaction[0] !== '0x0000000000000000000000000000000000000000') {
-                txs.push(transaction);
+                txs.push(transaction as never);
             }
         }
 
@@ -86,7 +86,7 @@ export default function ExecuteTx() {
     const executeTxHandler = async () => {
         const nonce = await readContract(config, {
             abi: safeLiteAbi.abi,
-            address: multiSigInput,
+            address: multiSigInput as `0x${string}`,
             functionName: 'nonce',
             args: [],
         });
@@ -94,14 +94,14 @@ export default function ExecuteTx() {
 
         const hash = await readContract(config, {
             abi: safeLiteAbi.abi,
-            address: multiSigInput,
+            address: multiSigInput as `0x${string}`,
             functionName: 'getTransactionHash',
             args: [Number(nonce), toInput, ethers.utils.parseEther(valueInput), ""],
-        });
+        }) as `0x${string}`
 
         const signatureCount = await readContract(config, {
             abi: safeLiteAbi.abi,
-            address: multiSigInput,
+            address: multiSigInput as `0x${string}`,
             functionName: 'getSignatureCount',
             args: [Number(nonce)],
         });
@@ -113,7 +113,7 @@ export default function ExecuteTx() {
 
         const executeTransaction = await walletClient?.writeContract({
             abi: safeLiteAbi.abi,
-            address: multiSigInput,
+            address: multiSigInput as `0x${string}`,
             functionName: 'signTransaction',
             args: [
                 Number(nonce),

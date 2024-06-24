@@ -59,7 +59,7 @@ export default function CreateWallet() {
     for (let i = 0; i < owners.length; i++) {
         ownerList.push(
             <li key={i}>
-                <Input style={{ width: 400 }} variant="bordered" color="success" type="text" label={`Signer ${i + 1}`} size="lg" id="multiSig" placeholder="Signer Address"
+                <Input style={{ width: 400 }} variant="bordered" color="success" label={`Signer ${i + 1}`} size="lg" id="multiSig" placeholder="Signer Address"
                     {...i === 0 ? { readOnly: true } : {}}
                     type="text"
                     value={owners[i]}
@@ -106,7 +106,7 @@ export default function CreateWallet() {
                                     <Input
                                         type="text"
                                         size="lg"
-                                        value={threshold}
+                                        value={threshold.toString()}
                                         onChange={(e) => {
                                             setThreshold(parseInt(e.target.value))
                                         }}
@@ -120,7 +120,13 @@ export default function CreateWallet() {
                                     <div style={{ width: 422 }}>
                                         <Input size="lg" variant="bordered" color="success" isReadOnly type="text" value={safeLite} />
                                     </div>
-                                    <Button size="lg" onClick={() => navigator.clipboard.writeText(safeLite)}>Copy</Button>
+                                    <Button size="lg" onClick={() => {
+                                            if (safeLite) {
+                                                navigator.clipboard.writeText(safeLite);
+                                            } else {
+                                                alert('Multisig wallet address is not available');
+                                        }
+                                    }}>Copy</Button>
                                 </div>
                             </div>
                         </div>

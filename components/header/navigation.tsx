@@ -92,7 +92,6 @@ export default function Navigation() {
                 index === 2 ? "warning" : index === menuItems.length - 1 ? "danger" : "foreground"
               }
               href={item}
-              size="lg"
             >
               {item}
             </Link>

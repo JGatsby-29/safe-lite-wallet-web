@@ -26,7 +26,7 @@ export default function ManageWallet() {
     const inquiryHandler = async () => {
         const balance = await readContract(config, {
             abi: safeLiteAbi.abi,
-            address: multiSigInput,
+            address: multiSigInput as `0x${string}`,
             functionName: 'getBalance',
             args: [],
         });
@@ -38,11 +38,11 @@ export default function ManageWallet() {
 
         const owners = await readContract(config, {
             abi: safeLiteAbi.abi,
-            address: multiSigInput,
+            address: multiSigInput as `0x${string}`,
             functionName: 'getOwners',
             args: [],
-        });
-
+        }) as `0x${string}`[];
+        
         console.log(owners);
         setOwners(owners);
     };
@@ -74,7 +74,7 @@ export default function ManageWallet() {
                             <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
                                 <h3>Balance</h3>
                                 <div style={{ width: 422 }}>
-                                    <Input size="lg" variant="bordered" color="success" isReadOnly type="text" value={balance} endContent={
+                                    <Input size="lg" variant="bordered" color="success" isReadOnly type="text" value={balance.toString()} endContent={
                                         <div className="pointer-events-none flex items-center">
                                             <span className="text-default-400 text-small">KLAY</span>
                                         </div>
