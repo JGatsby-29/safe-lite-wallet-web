@@ -39,7 +39,7 @@ export default function Navigation() {
       </NavbarContent>
 
       <NavbarContent justify='start'>
-        <NavbarBrand>
+        <NavbarBrand as={Link} href="/">
           <div style={{ width: 143, height: 29, position: 'relative' }}>
             <img
               src="/kaia_safe_lite.png"
