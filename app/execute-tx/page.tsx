@@ -156,7 +156,7 @@ export default function ExecuteTx() {
                                 </div>
                                 <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 140, display: 'inline-flex' }}>
                                     <Button onClick={executeTxHandler} size="lg" color="success" variant="shadow" className="text-white">
-                                        exeTx
+                                        Send
                                     </Button>
                                 </div>
                             </div>
@@ -184,7 +184,9 @@ export default function ExecuteTx() {
                                                 <TableCell>{index}</TableCell>
                                                 <TableCell>{transaction[0]}</TableCell>
                                                 <TableCell>{ethers.utils.formatEther(transaction[1])} KLAY</TableCell>
-                                                <TableCell>{transaction[2]}</TableCell>
+                                                <TableCell style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {transaction[2]}
+                                                </TableCell>
                                                 <TableCell>{transaction[3] ? "Yes" : "No"}</TableCell>
                                                 <TableCell>{Number(transaction[4])}</TableCell>
                                             </TableRow>

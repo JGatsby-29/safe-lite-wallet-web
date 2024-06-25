@@ -10,6 +10,8 @@ import { isAddress } from "web3-validator";
 import { useSafeLite } from "@/hooks/useSafeLite";
 import { Input, Button } from "@nextui-org/react";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@nextui-org/react";
+import Image from "next/image";
+import TrashIcon from "@/public/icon_trash.svg";
 
 export default function ManageWallet() {
     const { data: walletClient, isError, isLoading } = useWalletClient()
@@ -28,7 +30,7 @@ export default function ManageWallet() {
     const [newSigner, setNewSigner] = useState('');
     const [newThreshold, setNewThreshold] = useState('');
     const [existingSigner, setExistingSigner] = useState('');
-    const [newThreshold2, setNewThreshold2] = useState('');
+    const [removeThreshold, setRemoveThreshold] = useState('');
 
     const inquiryHandler = async () => {
         const balance = await readContract(config, {
@@ -55,8 +57,16 @@ export default function ManageWallet() {
     };
 
     const ownersInputs = owners.map((owner, index) => (
-        <div key={index} style={{ width: 422 }}>
-            <Input size="lg" variant="bordered" color="success" type="text" label={`new Signer ${index + 1}`} value={owner} />
+        <div key={index} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 422 }}>
+                <Input size="lg" variant="bordered" color="success" type="text" label={`Signer ${index + 1}`} value={owner} />
+            </div>
+            <Button isIconOnly onPress={() => {
+                setExistingSigner(owner);
+                onOpenRemoveSignerModal();
+            }} color="danger" variant="shadow" className="text-white">
+                <Image src={TrashIcon} alt="logo" width={20} height={20} />
+            </Button>
         </div>
     ));
 
@@ -74,7 +84,7 @@ export default function ManageWallet() {
         const data = safeLiteInterface.encodeFunctionData("addSigner", [newSigner, Number(newThreshold)]);
         console.log("Encoded data is: ", data);
 
-        const hash = await readContract(config, {   
+        const hash = await readContract(config, {
             abi: safeLiteAbi.abi,
             address: multiSigInput as `0x${string}`,
             functionName: 'getTransactionHash',
@@ -118,10 +128,10 @@ export default function ManageWallet() {
 
         const safeLiteInterface = new ethers.utils.Interface(safeLiteAbi.abi);
 
-        const data = safeLiteInterface.encodeFunctionData("removeSigner", [newSigner, Number(newThreshold)]);
+        const data = safeLiteInterface.encodeFunctionData("removeSigner", [existingSigner, Number(removeThreshold)]);
         console.log("Encoded data is: ", data);
 
-        const hash = await readContract(config, {   
+        const hash = await readContract(config, {
             abi: safeLiteAbi.abi,
             address: multiSigInput as `0x${string}`,
             functionName: 'getTransactionHash',
@@ -153,6 +163,12 @@ export default function ManageWallet() {
             ],
         });
     };
+
+    const onCloseAddSignerModalHandler = () => {
+        setNewSigner('');
+        setNewThreshold('');
+        onCloseAddSignerModal();
+    }
 
     return (
         <div style={{ backgroundColor: '#121312', minHeight: '100vh' }}>
@@ -186,100 +202,97 @@ export default function ManageWallet() {
                                 <h3>Owners</h3>
                                 <div id="owners-container" style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 10, display: 'inline-flex' }}>
                                     {ownersInputs}
-                                    <div style={{ display: 'flex', gap: 10 }}>
+                                    {owners.length > 0 && (
                                         <Button onPress={onOpenAddSignerModal} color="success" variant="shadow" className="text-white" >
                                             Add new Signer
                                         </Button>
-                                        <Modal
-                                            isOpen={addSignerModalOpen}
-                                            onOpenChange={onCloseAddSignerModal}
-                                            placement="top-center"
-                                        >
-                                            <ModalContent>
-                                                {(onClose) => (
-                                                    <>
-                                                        <ModalHeader className="flex flex-col gap-1">Add new Signer</ModalHeader>
-                                                        <ModalBody>
-                                                            <Input
-                                                                autoFocus
-                                                                label="New Singer"
-                                                                placeholder="Write new Singer address"
-                                                                variant="bordered"
-                                                                value={newSigner}
-                                                                onChange={(e) => setNewSigner(e.target.value)}
-                                                            />
-                                                            <Input
-                                                                label="Threshold"
-                                                                placeholder="Write new Threshold"
-                                                                variant="bordered"
-                                                                value={newThreshold}
-                                                                onChange={(e) => setNewThreshold(e.target.value)}
-                                                            />
-                                                            <div className="flex py-2 px-1 justify-between">
-                                                            </div>
-                                                        </ModalBody>
-                                                        <ModalFooter>
-                                                            <Button color="default" variant="flat" onPress={onClose}>
-                                                                Close
-                                                            </Button>
-                                                            <Button color="success" variant="shadow" className="text-white" onPress={() => {
-                                                                addSignerExeTx();
-                                                                onClose();
-                                                            }}>
-                                                                exeTx
-                                                            </Button>
-                                                        </ModalFooter>
-                                                    </>
-                                                )}
-                                            </ModalContent>
-                                        </Modal>
-                                        <Button onPress={onOpenRemoveSignerModal} color="danger" variant="shadow" className="text-white" >
-                                            Remove existing Signer
-                                        </Button>
-                                        <Modal
-                                            isOpen={removeSignerModalOpen}
-                                            onOpenChange={onCloseRemoveSignerModal}
-                                            placement="top-center"
-                                        >
-                                            <ModalContent>
-                                                {(onClose) => (
-                                                    <>
-                                                        <ModalHeader className="flex flex-col gap-1">Remove existing Signer</ModalHeader>
-                                                        <ModalBody>
-                                                            <Input
-                                                                autoFocus
-                                                                label="Existing Singer"
-                                                                placeholder="Write existing Singer address"
-                                                                variant="bordered"
-                                                                value={existingSigner}
-                                                                onChange={(e) => setExistingSigner(e.target.value)}
-                                                            />
-                                                            <Input
-                                                                label="Threshold"
-                                                                placeholder="Write new Threshold"
-                                                                variant="bordered"
-                                                                value={newThreshold2}
-                                                                onChange={(e) => setNewThreshold2(e.target.value)}
-                                                            />
-                                                            <div className="flex py-2 px-1 justify-between">
-                                                            </div>
-                                                        </ModalBody>
-                                                        <ModalFooter>
-                                                            <Button color="default" variant="flat" onPress={onClose}>
-                                                                Close
-                                                            </Button>
-                                                            <Button color="success" variant="shadow" className="text-white" onPress={() => {
-                                                                removeSignerExeTx();
-                                                                onClose();
-                                                            }}>
-                                                                exeTx
-                                                            </Button>
-                                                        </ModalFooter>
-                                                    </>
-                                                )}
-                                            </ModalContent>
-                                        </Modal>
-                                    </div>
+                                    )}
+                                    <Modal
+                                        isOpen={addSignerModalOpen}
+                                        onOpenChange={onCloseAddSignerModalHandler}
+                                        placement="top-center"
+                                    >
+                                        <ModalContent>
+                                            {(onClose) => (
+                                                <>
+                                                    <ModalHeader className="flex flex-col gap-1">Add new Signer</ModalHeader>
+                                                    <ModalBody>
+                                                        <Input
+                                                            autoFocus
+                                                            label="New Singer"
+                                                            placeholder="Write new Singer address"
+                                                            variant="bordered"
+                                                            value={newSigner}
+                                                            onChange={(e) => setNewSigner(e.target.value)}
+                                                        />
+                                                        <Input
+                                                            label="Threshold"
+                                                            placeholder="Write new Threshold"
+                                                            variant="bordered"
+                                                            value={newThreshold}
+                                                            onChange={(e) => setNewThreshold(e.target.value)}
+                                                        />
+                                                        <div className="flex py-2 px-1 justify-between">
+                                                        </div>
+                                                    </ModalBody>
+                                                    <ModalFooter>
+                                                        <Button color="default" variant="flat" onPress={onClose}>
+                                                            Close
+                                                        </Button>
+                                                        <Button color="success" variant="shadow" className="text-white" onPress={() => {
+                                                            addSignerExeTx();
+                                                            onClose();
+                                                        }}>
+                                                            Add
+                                                        </Button>
+                                                    </ModalFooter>
+                                                </>
+                                            )}
+                                        </ModalContent>
+                                    </Modal>
+                                    <Modal
+                                        isOpen={removeSignerModalOpen}
+                                        onOpenChange={onCloseRemoveSignerModal}
+                                        placement="top-center"
+                                    >
+                                        <ModalContent>
+                                            {(onClose) => (
+                                                <>
+                                                    <ModalHeader className="flex flex-col gap-1">Remove existing Signer</ModalHeader>
+                                                    <ModalBody>
+                                                        <Input
+                                                            readOnly
+                                                            label="Existing Singer"
+                                                            placeholder="Write existing Singer address"
+                                                            variant="bordered"
+                                                            value={existingSigner}
+                                                            onChange={(e) => setExistingSigner(e.target.value)}
+                                                        />
+                                                        <Input
+                                                            label="Threshold"
+                                                            placeholder="Write new Threshold"
+                                                            variant="bordered"
+                                                            value={removeThreshold}
+                                                            onChange={(e) => setRemoveThreshold(e.target.value)}
+                                                        />
+                                                        <div className="flex py-2 px-1 justify-between">
+                                                        </div>
+                                                    </ModalBody>
+                                                    <ModalFooter>
+                                                        <Button color="default" variant="flat" onPress={onClose}>
+                                                            Close
+                                                        </Button>
+                                                        <Button color="danger" variant="shadow" className="text-white" onPress={() => {
+                                                            removeSignerExeTx();
+                                                            onClose();
+                                                        }}>
+                                                            Remove
+                                                        </Button>
+                                                    </ModalFooter>
+                                                </>
+                                            )}
+                                        </ModalContent>
+                                    </Modal>
                                 </div>
                             </div>
                         </div>
