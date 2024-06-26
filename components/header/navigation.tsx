@@ -24,7 +24,6 @@ export default function Navigation() {
     "execute-tx",
   ];
 
-
   return (
     <Navbar
       isBordered

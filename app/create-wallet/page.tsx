@@ -1,7 +1,8 @@
 'use client';
 
-import { useWalletClient, useWaitForTransactionReceipt } from "wagmi";
+import { useWalletClient, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import * as safeLiteAbi from '@/abi/safeLite.json';
+import * as safeLiteAddressBookAbi from '@/abi/SafeLiteAddressBook.json';
 import { useEffect, useState } from "react";
 import { isAddress } from "web3-validator";
 import { useSafeLite } from "@/hooks/useSafeLite";
@@ -17,6 +18,7 @@ export default function CreateWallet() {
     const [owners, setOwners] = useState<`0x${string}`[]>(['0x',])
     const safeLite = useSafeLite(result?.data?.contractAddress ? result?.data?.contractAddress : undefined)
     const safeLiteWallet = useSafeLite()
+    const { writeContract } = useWriteContract();
 
     const createHandler = async () => {
         let invalidAddr = ''
@@ -33,18 +35,24 @@ export default function CreateWallet() {
             alert('Invalid threshold: ' + threshold)
             return
         }
-        const contract = await walletClient?.deployContract({
-            abi: safeLiteAbi.abi,
-            bytecode: safeLiteAbi.bytecode as `0x${string}`,
-            args: [1001, owners, threshold],
-        })
-        setSafeLiteDeployTxHash(contract ? contract : '')
-        if (result.isFetched && result?.status !== 'success') {
-            alert('Wallet Creation failed' + result?.error)
+        try {
+            const contract = await walletClient?.deployContract({
+                abi: safeLiteAbi.abi,
+                bytecode: safeLiteAbi.bytecode as `0x${string}`,
+                args: [1001, owners, threshold],
+            })
+            setSafeLiteDeployTxHash(contract ? contract : '')
+
+            if (result.isFetched && result?.status !== 'success') {
+                alert('Wallet Creation failed' + result?.error)
+            }
+            if (result.isFetched && result?.status == 'success') {
+                alert('Wallet Creation succeed' + result?.error)
+            }
+        } catch (error) {
+            console.error('Error:', error)
+            alert('Wallet creation or recording failed')
         }
-        if (result.isFetched && result?.status == 'success') {
-            alert('Wallet Creation succeed' + result?.error)
-        } ``
     }
 
     useEffect(() => {
@@ -54,7 +62,7 @@ export default function CreateWallet() {
             setOwners(newOwners)
         }
     }, [walletClient?.account.address])
-    
+
     const ownerList = []
     for (let i = 0; i < owners.length; i++) {
         ownerList.push(
@@ -121,10 +129,10 @@ export default function CreateWallet() {
                                         <Input size="lg" variant="bordered" color="success" isReadOnly type="text" value={safeLite} />
                                     </div>
                                     <Button size="lg" onClick={() => {
-                                            if (safeLite) {
-                                                navigator.clipboard.writeText(safeLite);
-                                            } else {
-                                                alert('Multisig wallet address is not available');
+                                        if (safeLite) {
+                                            navigator.clipboard.writeText(safeLite);
+                                        } else {
+                                            alert('Multisig wallet address is not available');
                                         }
                                     }}>Copy</Button>
                                 </div>

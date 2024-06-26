@@ -1,19 +1,23 @@
 'use client';
 
-import { useWalletClient, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useWalletClient, useWaitForTransactionReceipt } from "wagmi";
 import { readContract } from "@wagmi/core"
 import { config } from "@/app/config/config"
 import * as safeLiteAbi from '@/abi/safeLite.json';
+import * as safeLiteAddressBookAbi from '@/abi/SafeLiteAddressBook.json';
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { isAddress } from "web3-validator";
 import { useSafeLite } from "@/hooks/useSafeLite";
 import { Input, Button } from "@nextui-org/react";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@nextui-org/react";
-import Image from "next/image";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@nextui-org/react";
+import { Card, CardHeader, CardBody, CardFooter, Divider, Link, Image } from "@nextui-org/react";
+
 import TrashIcon from "@/public/icon_trash.svg";
 
 export default function ManageWallet() {
+    const { address } = useAccount();
     const { data: walletClient, isError, isLoading } = useWalletClient()
     const [safeLiteDeployTxHash, setSafeLiteDeployTxHash] = useState('')
     const result = useWaitForTransactionReceipt({
@@ -23,6 +27,8 @@ export default function ManageWallet() {
     const safeLite = useSafeLite(result?.data?.contractAddress ? result?.data?.contractAddress : undefined)
     const safeLiteWallet = useSafeLite()
     const [multiSigInput, setMultiSigInput] = useState('');
+    const [multiSigInputs, setMultiSigInputs] = useState<`0x${string}`[]>([]); // multiSigInputs 상태를 배열로 선언
+
     const [balance, setBalance] = useState(0)
     const { isOpen: addSignerModalOpen, onOpen: onOpenAddSignerModal, onClose: onCloseAddSignerModal } = useDisclosure();
     const { isOpen: removeSignerModalOpen, onOpen: onOpenRemoveSignerModal, onClose: onCloseRemoveSignerModal } = useDisclosure();
@@ -31,6 +37,45 @@ export default function ManageWallet() {
     const [newThreshold, setNewThreshold] = useState('');
     const [existingSigner, setExistingSigner] = useState('');
     const [removeThreshold, setRemoveThreshold] = useState('');
+    const [transactions, setTransactions] = useState<never[]>([]);
+    const addressBook = '0x28A56395523AA1feEf1CAc427FbfA5E8b4767F91';
+
+    useEffect(() => {
+        if (address) {
+            const fetchMultiSigWallets = async () => {
+                try {
+                    const multiSigWallets = await readContract(config, {
+                        abi: safeLiteAddressBookAbi.abi,
+                        address: addressBook,
+                        functionName: 'getWalletsByOwner',
+                        args: [address],
+                    }) as `0x${string}`[];
+
+                    setMultiSigInputs(multiSigWallets);
+
+                } catch (error) {
+                    console.error('Error fetching multisig wallets:', error);
+                }
+            };
+
+            fetchMultiSigWallets();
+        }
+    }, [address]);
+
+    const multiSigInputsList = multiSigInputs.map((walletAddress, index) => (
+        <div key={index} style={{ marginBottom: '10px' }}>
+            <Input
+                readOnly
+                size="lg"
+                variant="bordered"
+                color="success"
+                type="text"
+                value={walletAddress}
+                onClick={() => setMultiSigInput(walletAddress)}
+                label={`MultiSig Wallet ${index + 1}`}
+            />
+        </div>
+    ));
 
     const inquiryHandler = async () => {
         const balance = await readContract(config, {
@@ -54,18 +99,42 @@ export default function ManageWallet() {
 
         console.log(owners);
         setOwners(owners);
+
+        const nonce = Number(await readContract(config, {
+            abi: safeLiteAbi.abi,
+            address: multiSigInput as `0x${string}`,
+            functionName: 'nonce',
+            args: [],
+        }));
+        console.log("nonce is", nonce)
+
+        const txs: never[] = [];
+        for (let i = 0; i <= nonce; i++) {
+            const transaction = await readContract(config, {
+                abi: safeLiteAbi.abi,
+                address: multiSigInput as `0x${string}`,
+                functionName: 'getTransaction',
+                args: [i],
+            }) as [string, ethers.BigNumber, string, boolean, ethers.BigNumber];
+            if (transaction[0] !== '0x0000000000000000000000000000000000000000') {
+                txs.push(transaction as never);
+            }
+        }
+
+        console.log("Transaction info: ", txs);
+        setTransactions(txs);
     };
 
     const ownersInputs = owners.map((owner, index) => (
         <div key={index} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 422 }}>
-                <Input size="lg" variant="bordered" color="success" type="text" label={`Signer ${index + 1}`} value={owner} />
+                <Input readOnly size="lg" variant="bordered" color="success" type="text" label={`Signer ${index + 1}`} value={owner} />
             </div>
             <Button isIconOnly onPress={() => {
                 setExistingSigner(owner);
                 onOpenRemoveSignerModal();
             }} color="danger" variant="shadow" className="text-white">
-                <Image src={TrashIcon} alt="logo" width={20} height={20} />
+                <Image src="./icon_trash.svg" radius="none" alt="logo" width={20} height={2} />
             </Button>
         </div>
     ));
@@ -164,6 +233,52 @@ export default function ManageWallet() {
         });
     };
 
+    const getTransactionType = (data: string): string => {
+        if (data === "0x") {
+            return "Send Token";
+        } else if (data.startsWith("0x65af1bed")) {
+            return "Add Signer";
+        } else if (data.startsWith("0x3bad5426")) {
+            return "Remove Signer";
+        } else {
+            return "Unknown";
+        }
+    };
+
+    const getCardBodyContent = (transaction: [string, ethers.BigNumber, string, boolean, ethers.BigNumber]): JSX.Element => {
+        const data = transaction[2];
+        if (typeof data === "string" && data === "0x") {
+            return (
+                <p>
+                    To : {transaction[0]}
+                    <br />
+                    Value : {ethers.utils.formatEther(transaction[1])} KLAY
+                </p>
+            );
+        } else if (typeof data === "string" && data.startsWith("0x65af1bed")) {
+            const signerAddress = `0x${data.slice(34, 74)}`;
+            return (
+                <p>
+                    To : {signerAddress}
+                    <br />
+                    Value : {ethers.utils.formatEther(transaction[1])} KLAY
+                </p>
+            );
+        } else if (typeof data === "string" && data.startsWith("0x3bad5426")) {
+            const signerAddress = `0x${data.slice(34, 74)}`;
+            return (
+                <p>
+                    To : {signerAddress}
+                    <br />
+                    Value : {ethers.utils.formatEther(transaction[1])} KLAY
+                </p>
+            );
+        } else {
+            return <p>Data: {data}</p>;
+        }
+    };
+
+
     const onCloseAddSignerModalHandler = () => {
         setNewSigner('');
         setNewThreshold('');
@@ -179,6 +294,12 @@ export default function ManageWallet() {
                     <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 46, display: 'flex' }}>
                         <div style={{ width: 400, color: 'white', fontSize: 38, fontFamily: 'Outfit', fontWeight: '700', wordWrap: 'break-word' }}>Manage Wallet</div>
                         <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 80, display: 'inline-flex' }}>
+                            <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
+                                <h3>Multisig wallet addresses</h3>
+                                <div style={{ width: 422 }}>
+                                    {multiSigInputsList}
+                                </div>
+                            </div>
                             <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
                                 <h3>Multisig wallet address</h3>
                                 <div style={{ justifyContent: 'flex-start', alignItems: 'flex-end', gap: 22, display: 'inline-flex' }}>
@@ -293,6 +414,82 @@ export default function ManageWallet() {
                                             )}
                                         </ModalContent>
                                     </Modal>
+                                </div>
+                            </div>
+                            <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 40, display: 'flex', marginBottom: "200px" }}>
+                                <h3>Transaction Info</h3>
+                                {/*
+                                <Table
+                                    color="success"
+                                    selectionMode="single"
+                                    aria-label="Transaction Info Table">
+                                    <TableHeader>
+                                        <TableColumn>Transaction ID</TableColumn>
+                                        <TableColumn>To</TableColumn>
+                                        <TableColumn>Value</TableColumn>
+                                        <TableColumn>Data</TableColumn>
+                                        <TableColumn>Executed</TableColumn>
+                                        <TableColumn>Signature Count</TableColumn>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {transactions.map((transaction, index) => (
+                                            <TableRow key={index}>
+                                                <TableCell>{index}</TableCell>
+                                                <TableCell>{transaction[0]}</TableCell>
+                                                <TableCell>{ethers.utils.formatEther(transaction[1])} KLAY</TableCell>
+                                                <TableCell style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {transaction[2]}
+                                                </TableCell>
+                                                <TableCell>{transaction[3] ? "Yes" : "No"}</TableCell>
+                                                <TableCell>{Number(transaction[4])}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                                */}
+                                <div className="cards-container">
+                                    {transactions.map((transaction, index) => (
+                                        <Card key={index} className="max-w-[400px]">
+                                            <CardHeader className="flex gap-3">
+                                                <Image
+                                                    alt="kaia logo"
+                                                    height={40}
+                                                    src="./favicon.png"
+                                                    width={40}
+                                                />
+                                                <div className="flex flex-col">
+                                                    <p className="text-md">{getTransactionType(transaction[2])}</p>
+                                                    <p className="text-small text-default-500">Transaction #{index + 1}</p>
+                                                </div>
+                                            </CardHeader>
+                                            <Divider />
+                                            <CardBody>
+                                                {getCardBodyContent(transaction)}
+                                            </CardBody>
+                                            <Divider />
+                                            <CardFooter>
+                                                {transaction[3] ? (
+                                                    <Link
+                                                        isBlock
+                                                        isExternal
+                                                        showAnchorIcon
+                                                        color="success"
+                                                        href={`https://baobab.klaytnscope.com/account/${multiSigInput}?tabId=internalTx`}>
+                                                        Transaction Executed
+                                                    </Link>
+                                                ) : (
+                                                    <Link 
+                                                        isBlock
+                                                        isExternal
+                                                        showAnchorIcon
+                                                        color="danger"
+                                                        href={`https://baobab.klaytnscope.com/account/${multiSigInput}?tabId=internalTx`}>
+                                                        Transaction Not Executed
+                                                    </Link>
+                                                )}
+                                            </CardFooter>
+                                        </Card>
+                                    ))}
                                 </div>
                             </div>
                         </div>

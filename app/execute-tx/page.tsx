@@ -26,7 +26,6 @@ export default function ExecuteTx() {
             functionName: 'nonce',
             args: [],
         });
-        // console.log("nonce is: ", nonce);
 
         const hash = await readContract(config, {
             abi: safeLiteAbi.abi,
@@ -34,53 +33,13 @@ export default function ExecuteTx() {
             functionName: 'getTransactionHash',
             args: [Number(nonce), toInput, ethers.utils.parseEther(valueInput), ""],
         }) as `0x${string}`
-        // console.log("Transaction hash fetched: ", hash);
-        // console.log("nonce is", nonce)
-        // console.log("walletClient?.account.address: ", walletClient?.account.address);
 
         const signaturePromise = walletClient?.signMessage({
             message: { raw: hash },
         });
         const signature = await signaturePromise;
-        // console.log("hash is =", hash);
-        // console.log("signature is =", signature);
 
         setSignature(signature || "");
-    };
-
-    const getTransactionInfoHandler = async () => {
-        const nonce = Number(await readContract(config, {
-            abi: safeLiteAbi.abi,
-            address: multiSigInput as `0x${string}`,
-            functionName: 'nonce',
-            args: [],
-        }));
-        console.log("nonce is", nonce)
-
-        /*const transaction = await readContract(config, {
-            abi: safeLiteAbi.abi,
-            address: multiSigInput,
-            functionName: 'getTransaction',
-            args: [transactionId],
-        });
-        console.log("Transaction info: ", transaction);
-        setTransactionInfo(transaction);*/
-
-        const txs: never[] = [];
-        for (let i = 0; i < nonce; i++) {
-            const transaction = await readContract(config, {
-                abi: safeLiteAbi.abi,
-                address: multiSigInput as `0x${string}`,
-                functionName: 'getTransaction',
-                args: [i],
-            }) as [string, ethers.BigNumber, string, boolean, ethers.BigNumber];
-            if (transaction[0] !== '0x0000000000000000000000000000000000000000') {
-                txs.push(transaction as never);
-            }
-        }
-
-        console.log("Transaction info: ", txs);
-        setTransactions(txs);
     };
 
     const executeTxHandler = async () => {
@@ -160,40 +119,6 @@ export default function ExecuteTx() {
                                     </Button>
                                 </div>
                             </div>
-                        </div>
-                        <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 40, display: 'flex', marginBottom: "200px" }}>
-                            <h2 style={{ color: 'white', fontSize: 38, fontFamily: 'Outfit', fontWeight: '900', wordWrap: 'break-word' }}>Get Transaction Info</h2>
-                            <Button onClick={getTransactionInfoHandler} size="lg" color="success" variant="shadow" className="text-white">Get Transaction Info</Button>
-                            {error && <p style={{ color: 'red' }}>{error}</p>}
-                            {transactions.length > 0 && (
-                                <Table
-                                    color="success"
-                                    selectionMode="single"
-                                    aria-label="Transaction Info Table">
-                                    <TableHeader>
-                                        <TableColumn>Transaction ID</TableColumn>
-                                        <TableColumn>To</TableColumn>
-                                        <TableColumn>Value</TableColumn>
-                                        <TableColumn>Data</TableColumn>
-                                        <TableColumn>Executed</TableColumn>
-                                        <TableColumn>Signature Count</TableColumn>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {transactions.map((transaction, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell>{index}</TableCell>
-                                                <TableCell>{transaction[0]}</TableCell>
-                                                <TableCell>{ethers.utils.formatEther(transaction[1])} KLAY</TableCell>
-                                                <TableCell style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    {transaction[2]}
-                                                </TableCell>
-                                                <TableCell>{transaction[3] ? "Yes" : "No"}</TableCell>
-                                                <TableCell>{Number(transaction[4])}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            )}
                         </div>
                     </div>
                 </div>
