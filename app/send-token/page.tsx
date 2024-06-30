@@ -5,10 +5,12 @@ import { signMessage, writeContract, readContract } from '@wagmi/core';
 import { config } from '@/app/config/config';
 import { parseGwei, parseEther } from 'viem'
 import { ethers } from "ethers";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSafeLite } from "@/hooks/useSafeLite";
 import * as safeLiteAbi from '@/abi/safeLite.json';
 import { Input, Button, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@nextui-org/react";
+import { useWallet } from "@/app/walletContext";
 
 export default function ExecuteTx() {
     const { data: walletClient, isError, isLoading } = useWalletClient();
@@ -18,6 +20,26 @@ export default function ExecuteTx() {
     const [signature, setSignature] = useState('');
     const [transactions, setTransactions] = useState<never[]>([]);
     const [error, setError] = useState('');
+    const { selectedWallet, setSelectedWallet } = useWallet();
+    const router = useRouter();
+
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const toParam = urlParams.get('to');
+        const valueParam = urlParams.get('value');
+
+        if (toParam) {
+            setTo(toParam);
+        }
+        if (valueParam) {
+            setValue(valueParam);
+        }
+    }, []);
+
+
+    useEffect(() => {
+        setMultiSig(selectedWallet);
+    }, [selectedWallet]);
 
     const signTxHandler = async () => {
         const nonce = await readContract(config, {
@@ -91,13 +113,13 @@ export default function ExecuteTx() {
             <div style={{ width: '100%', height: '100%', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center', gap: 10, display: 'inline-flex' }}>
                 <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-end', gap: 44, display: 'flex' }}>
                     <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 46, display: 'flex' }}>
-                        <div style={{ color: 'white', fontSize: 38, fontFamily: 'Outfit', fontWeight: '700', wordWrap: 'break-word' }}>Execute Transaction</div>
+                        <div style={{ color: 'white', fontSize: 38, fontFamily: 'Outfit', fontWeight: '700', wordWrap: 'break-word' }}>Send Token</div>
                         <div style={{ paddingLeft: 60, paddingRight: 60, paddingTop: 40, paddingBottom: 40, background: '#1C1C1C', borderRadius: 10, overflow: 'hidden', border: '1px #303033 solid', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 10, display: 'flex' }}>
                             <div style={{ justifyContent: 'flex-start', alignItems: 'flex-end', gap: 242, display: 'inline-flex' }}>
                                 <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 40, display: 'inline-flex' }}>
                                     <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
                                         <div style={{ width: 400, color: 'white', fontSize: 24, fontFamily: 'Outfit', fontWeight: '400', wordWrap: 'break-word' }}>MultiSig Wallet Address</div>
-                                        <Input variant="bordered" color="success" type="text" label="Multisig" size="lg" id="multiSig" value={multiSigInput} onChange={(e) => setMultiSig(e.target.value)} placeholder="your multisig wallet address" style={{ width: '100%' }} />
+                                        <Input readOnly variant="bordered" color="success" type="text" label="Multisig" size="lg" id="multiSig" value={multiSigInput} onChange={(e) => setMultiSig(e.target.value)} placeholder="your multisig wallet address" style={{ width: '100%' }} />
                                     </div>
                                     <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 60, display: 'flex' }}>
                                         <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>

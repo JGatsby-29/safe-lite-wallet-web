@@ -5,6 +5,7 @@ import {
   RainbowKitProvider,
   getDefaultWallets,
   getDefaultConfig,
+  darkTheme
 } from '@rainbow-me/rainbowkit';
 import {
   trustWallet,
@@ -19,6 +20,8 @@ import { WagmiProvider, http } from 'wagmi';
 // import according to docs
 import { NextUIProvider } from '@nextui-org/react'
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { WalletProvider } from '@/app/walletContext';
+import { Wallet } from 'ethers';
 
 const { wallets } = getDefaultWallets();
 // initialize and destructure wallets object
@@ -52,8 +55,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <NextThemesProvider attribute="class" defaultTheme="dark">
         <WagmiProvider config={config}>
           <QueryClientProvider client={queryClient}>
-            <RainbowKitProvider>
-              {children}
+            <RainbowKitProvider theme={darkTheme()}>
+              <WalletProvider>
+                {children}
+              </WalletProvider>
             </RainbowKitProvider>
           </QueryClientProvider>
         </WagmiProvider>

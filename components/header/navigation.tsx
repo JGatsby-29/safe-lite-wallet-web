@@ -21,7 +21,7 @@ export default function Navigation() {
     "",
     "create-wallet",
     "manage-wallet",
-    "execute-tx",
+    "send-token",
   ];
 
   return (
@@ -70,8 +70,8 @@ export default function Navigation() {
           </Link>
         </NavbarItem>
         <NavbarItem>
-          <Link href="/execute-tx" color="foreground">
-            Execute Transaction
+          <Link href="/send-token" color="foreground">
+            Send Token
           </Link>
         </NavbarItem>
       </NavbarContent>

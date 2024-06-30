@@ -24,7 +24,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={outfit.className} style={{ color: 'white', backgroundColor: '#1C1C1C' }}>
+      <body className={outfit.className} style={{ color: 'white', backgroundColor: '#121312' }}>
         <Providers>
           <Navigation />
             {children}

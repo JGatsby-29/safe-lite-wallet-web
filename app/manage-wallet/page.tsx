@@ -6,6 +6,7 @@ import { config } from "@/app/config/config"
 import * as safeLiteAbi from '@/abi/safeLite.json';
 import * as safeLiteAddressBookAbi from '@/abi/SafeLiteAddressBook.json';
 import { useEffect, useState } from "react";
+import { useRouter } from 'next/navigation';
 import { ethers } from "ethers";
 import { isAddress } from "web3-validator";
 import { useSafeLite } from "@/hooks/useSafeLite";
@@ -13,6 +14,7 @@ import { Input, Button } from "@nextui-org/react";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@nextui-org/react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@nextui-org/react";
 import { Card, CardHeader, CardBody, CardFooter, Divider, Link, Image } from "@nextui-org/react";
+import { useWallet } from "@/app/walletContext";
 
 import TrashIcon from "@/public/icon_trash.svg";
 
@@ -27,9 +29,9 @@ export default function ManageWallet() {
     const safeLite = useSafeLite(result?.data?.contractAddress ? result?.data?.contractAddress : undefined)
     const safeLiteWallet = useSafeLite()
     const [multiSigInput, setMultiSigInput] = useState('');
-    const [multiSigInputs, setMultiSigInputs] = useState<`0x${string}`[]>([]); // multiSigInputs 상태를 배열로 선언
 
     const [balance, setBalance] = useState(0)
+    const [requireSignatures, setRequiredSignatures] = useState(0);
     const { isOpen: addSignerModalOpen, onOpen: onOpenAddSignerModal, onClose: onCloseAddSignerModal } = useDisclosure();
     const { isOpen: removeSignerModalOpen, onOpen: onOpenRemoveSignerModal, onClose: onCloseRemoveSignerModal } = useDisclosure();
 
@@ -39,43 +41,11 @@ export default function ManageWallet() {
     const [removeThreshold, setRemoveThreshold] = useState('');
     const [transactions, setTransactions] = useState<never[]>([]);
     const addressBook = '0x28A56395523AA1feEf1CAc427FbfA5E8b4767F91';
+    const { selectedWallet, setSelectedWallet } = useWallet();
 
     useEffect(() => {
-        if (address) {
-            const fetchMultiSigWallets = async () => {
-                try {
-                    const multiSigWallets = await readContract(config, {
-                        abi: safeLiteAddressBookAbi.abi,
-                        address: addressBook,
-                        functionName: 'getWalletsByOwner',
-                        args: [address],
-                    }) as `0x${string}`[];
-
-                    setMultiSigInputs(multiSigWallets);
-
-                } catch (error) {
-                    console.error('Error fetching multisig wallets:', error);
-                }
-            };
-
-            fetchMultiSigWallets();
-        }
-    }, [address]);
-
-    const multiSigInputsList = multiSigInputs.map((walletAddress, index) => (
-        <div key={index} style={{ marginBottom: '10px' }}>
-            <Input
-                readOnly
-                size="lg"
-                variant="bordered"
-                color="success"
-                type="text"
-                value={walletAddress}
-                onClick={() => setMultiSigInput(walletAddress)}
-                label={`MultiSig Wallet ${index + 1}`}
-            />
-        </div>
-    ));
+        setMultiSigInput(selectedWallet);
+    }, [selectedWallet]);
 
     const inquiryHandler = async () => {
         const balance = await readContract(config, {
@@ -89,6 +59,14 @@ export default function ManageWallet() {
 
         console.log(balanceEtherNoDecimal);
         setBalance(Number(balanceEtherNoDecimal));
+
+        const requireSignatures = await readContract(config, {
+            abi: safeLiteAbi.abi,
+            address: multiSigInput as `0x${string}`,
+            functionName: 'getRequiredSignatures',
+            args: [],
+        });
+        setRequiredSignatures(Number(requireSignatures));
 
         const owners = await readContract(config, {
             abi: safeLiteAbi.abi,
@@ -247,6 +225,9 @@ export default function ManageWallet() {
 
     const getCardBodyContent = (transaction: [string, ethers.BigNumber, string, boolean, ethers.BigNumber]): JSX.Element => {
         const data = transaction[2];
+        console.log(transaction[2])
+
+
         if (typeof data === "string" && data === "0x") {
             return (
                 <p>
@@ -261,7 +242,7 @@ export default function ManageWallet() {
                 <p>
                     To : {signerAddress}
                     <br />
-                    Value : {ethers.utils.formatEther(transaction[1])} KLAY
+                    New Required Singature Count : {transaction[2].slice(-1)}
                 </p>
             );
         } else if (typeof data === "string" && data.startsWith("0x3bad5426")) {
@@ -270,7 +251,7 @@ export default function ManageWallet() {
                 <p>
                     To : {signerAddress}
                     <br />
-                    Value : {ethers.utils.formatEther(transaction[1])} KLAY
+                    New Required Singature Counts : {transaction[2].slice(-1)}
                 </p>
             );
         } else {
@@ -278,6 +259,29 @@ export default function ManageWallet() {
         }
     };
 
+    const router = useRouter();
+
+    const handleAddSignerModalOpen = (transaction: [string, ethers.BigNumber, string, boolean, ethers.BigNumber]) => {
+        const signerAddress = `0x${transaction[2].slice(34, 74)}`;
+        const threshold = transaction[2].slice(-1);
+        setNewSigner(signerAddress);
+        setNewThreshold(threshold);
+        onOpenAddSignerModal();
+    };
+
+    const handleRemoveSignerModalOpen = (transaction: [string, ethers.BigNumber, string, boolean, ethers.BigNumber]) => {
+        const signerAddress = `0x${transaction[2].slice(34, 74)}`;
+        const threshold = transaction[2].slice(-1);
+        setExistingSigner(signerAddress);
+        setRemoveThreshold(threshold);
+        onOpenRemoveSignerModal();
+    };
+
+    const handleSendTokenRedirect = (to: string, value: ethers.BigNumber) => {
+        const toAddress = to;
+        const tokenValue = ethers.utils.formatEther(value);
+        router.push(`/send-token?to=${toAddress}&value=${tokenValue}`);
+    };
 
     const onCloseAddSignerModalHandler = () => {
         setNewSigner('');
@@ -295,29 +299,31 @@ export default function ManageWallet() {
                         <div style={{ width: 400, color: 'white', fontSize: 38, fontFamily: 'Outfit', fontWeight: '700', wordWrap: 'break-word' }}>Manage Wallet</div>
                         <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 80, display: 'inline-flex' }}>
                             <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
-                                <h3>Multisig wallet addresses</h3>
-                                <div style={{ width: 422 }}>
-                                    {multiSigInputsList}
-                                </div>
-                            </div>
-                            <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
                                 <h3>Multisig wallet address</h3>
                                 <div style={{ justifyContent: 'flex-start', alignItems: 'flex-end', gap: 22, display: 'inline-flex' }}>
                                     <div style={{ width: 422 }}>
-                                        <Input size="lg" variant="bordered" color="success" type="text" value={multiSigInput} onChange={(e) => setMultiSigInput(e.target.value)} />
+                                        <Input readOnly size="lg" variant="bordered" color="success" type="text" value={multiSigInput} onChange={(e) => setMultiSigInput(e.target.value)} />
                                     </div>
                                     <Button size="lg" onClick={inquiryHandler}>Inquiry</Button>
                                 </div>
                             </div>
-                            <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
-                                <h3>Balance</h3>
-                                <div style={{ width: 422 }}>
-                                    <Input size="lg" variant="bordered" color="success" isReadOnly type="text" value={balance.toString()} endContent={
-                                        <div className="pointer-events-none flex items-center">
-                                            <span className="text-default-400 text-small">KLAY</span>
-                                        </div>
-                                    } />
+                            <div style={{ display: 'flex', gap: '20px' }}>
+                                <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
+                                    <h3>Balance</h3>
+                                    <div style={{ width: 211 }}>
+                                        <Input size="lg" variant="bordered" color="success" isReadOnly type="text" value={balance.toString()} endContent={
+                                            <div className="pointer-events-none flex items-center">
+                                                <span className="text-default-400 text-small">KLAY</span>
+                                            </div>
+                                        } />
+                                    </div>
                                 </div>
+                                <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
+                                        <h3>Required Signatures</h3>
+                                        <div style={{ width: 211 }}>
+                                            <Input size="lg" variant="bordered" color="success" isReadOnly type="text" value={requireSignatures.toString()} />
+                                        </div>
+                                    </div>
                             </div>
                             <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
                                 <h3>Owners</h3>
@@ -463,7 +469,7 @@ export default function ManageWallet() {
                                                 </div>
                                             </CardHeader>
                                             <Divider />
-                                            <CardBody>
+                                            <CardBody style={{ fontSize: '14px'}}>
                                                 {getCardBodyContent(transaction)}
                                             </CardBody>
                                             <Divider />
@@ -478,14 +484,44 @@ export default function ManageWallet() {
                                                         Transaction Executed
                                                     </Link>
                                                 ) : (
-                                                    <Link 
-                                                        isBlock
-                                                        isExternal
-                                                        showAnchorIcon
-                                                        color="danger"
-                                                        href={`https://baobab.klaytnscope.com/account/${multiSigInput}?tabId=internalTx`}>
-                                                        Transaction Not Executed
-                                                    </Link>
+                                                    <>
+                                                        {getTransactionType(transaction[2]) === "Add Signer" && (
+                                                            <Link
+                                                                isBlock
+                                                                isExternal
+                                                                showAnchorIcon
+                                                                color="danger"
+                                                                onClick={() => handleAddSignerModalOpen(transaction)}
+                                                                style={{ cursor: 'pointer' }}
+                                                            >
+                                                                Transaction Not Executed, Go To Sign
+                                                            </Link>
+                                                        )}
+                                                        {getTransactionType(transaction[2]) === "Remove Signer" && (
+                                                            <Link
+                                                                isBlock
+                                                                isExternal
+                                                                showAnchorIcon
+                                                                color="danger"
+                                                                onClick={() => handleRemoveSignerModalOpen(transaction)}
+                                                                style={{ cursor: 'pointer' }}
+                                                            >
+                                                                Transaction Not Executed, Go To Sign
+                                                            </Link>
+                                                        )}
+                                                        {getTransactionType(transaction[2]) === "Send Token" && (
+                                                            <Link
+                                                                isBlock
+                                                                isExternal
+                                                                showAnchorIcon
+                                                                color="danger"
+                                                                onClick={() => handleSendTokenRedirect(transaction[0], transaction[1])}
+                                                                style={{ cursor: 'pointer' }}
+                                                            >
+                                                                Transaction Not Executed, Go To Send Token
+                                                            </Link>
+                                                        )}
+                                                    </>
                                                 )}
                                             </CardFooter>
                                         </Card>
