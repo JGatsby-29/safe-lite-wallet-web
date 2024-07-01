@@ -304,7 +304,7 @@ export default function ManageWallet() {
                                     <div style={{ width: 422 }}>
                                         <Input readOnly size="lg" variant="bordered" color="success" type="text" value={multiSigInput} onChange={(e) => setMultiSigInput(e.target.value)} />
                                     </div>
-                                    <Button size="lg" onClick={inquiryHandler}>Inquiry</Button>
+                                    <Button color="success" variant="shadow" className="text-white" size="lg" onClick={inquiryHandler}>Inquiry</Button>
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '20px' }}>

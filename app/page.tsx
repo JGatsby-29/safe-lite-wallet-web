@@ -86,7 +86,7 @@ export default function Home() {
                 <div style={{ fontSize: '24px', fontWeight: '200', textAlign: 'center' }}>
                   Connect your wallet to create a new Safe lite<br /> Account or open an existing one
                 </div>
-                <ConnectButton label="Connect Wallet"/>
+                <ConnectButton label="Connect Your Wallet"/>
               </>
             ) : (
               <>

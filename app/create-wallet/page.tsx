@@ -6,7 +6,7 @@ import * as safeLiteAddressBookAbi from '@/abi/SafeLiteAddressBook.json';
 import { useEffect, useState } from "react";
 import { isAddress } from "web3-validator";
 import { useSafeLite } from "@/hooks/useSafeLite";
-import { Input, Button } from "@nextui-org/react";
+import { Input, Button, Image } from "@nextui-org/react";
 
 export default function CreateWallet() {
     const { data: walletClient, isError, isLoading } = useWalletClient()
@@ -124,17 +124,19 @@ export default function CreateWallet() {
                             </div>
                             <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
                                 <h3>Multisig wallet address</h3>
-                                <div style={{ justifyContent: 'flex-start', alignItems: 'flex-end', gap: 22, display: 'inline-flex' }}>
+                                <div style={{ justifyContent: 'flex-start', alignItems: 'flex-end', gap: 20, display: 'inline-flex' }}>
                                     <div style={{ width: 422 }}>
                                         <Input size="lg" variant="bordered" color="success" isReadOnly type="text" value={safeLite} />
                                     </div>
-                                    <Button size="lg" onClick={() => {
+                                    <Button size="lg" isIconOnly onClick={() => {
                                         if (safeLite) {
                                             navigator.clipboard.writeText(safeLite);
                                         } else {
                                             alert('Multisig wallet address is not available');
                                         }
-                                    }}>Copy</Button>
+                                    }}>
+                                        <Image src="./icon_copy.svg" radius="none" alt="logo" width={20} height={2} />
+                                    </Button>
                                 </div>
                             </div>
                         </div>

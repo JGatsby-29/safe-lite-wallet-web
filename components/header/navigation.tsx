@@ -78,7 +78,7 @@ export default function Navigation() {
 
       <NavbarContent justify="end">
         <NavbarItem>
-          <ConnectButton />
+          <ConnectButton label="Connect"/>
         </NavbarItem>
       </NavbarContent>
 
