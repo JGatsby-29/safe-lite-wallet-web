@@ -55,7 +55,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <NextThemesProvider attribute="class" defaultTheme="dark">
         <WagmiProvider config={config}>
           <QueryClientProvider client={queryClient}>
-            <RainbowKitProvider theme={darkTheme()}>
+            <RainbowKitProvider theme={darkTheme({ accentColor: '#6CC570' })}>
               <WalletProvider>
                 {children}
               </WalletProvider>
