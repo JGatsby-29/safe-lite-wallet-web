@@ -63,7 +63,7 @@ export default function Home() {
           readOnly
           size="lg"
           variant="bordered"
-          color="success"
+          color="primary"
           type="text"
           value={walletAddress}
           label={`MultiSig Wallet ${index + 1}`}

@@ -106,7 +106,7 @@ export default function ManageWallet() {
     const ownersInputs = owners.map((owner, index) => (
         <div key={index} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 422 }}>
-                <Input readOnly size="lg" variant="bordered" color="success" type="text" label={`Signer ${index + 1}`} value={owner} />
+                <Input readOnly size="lg" variant="bordered" color="primary" type="text" label={`Signer ${index + 1}`} value={owner} />
             </div>
             <Button isIconOnly onPress={() => {
                 setExistingSigner(owner);
@@ -302,16 +302,16 @@ export default function ManageWallet() {
                                 <h3>Multisig wallet address</h3>
                                 <div style={{ justifyContent: 'flex-start', alignItems: 'flex-end', gap: 22, display: 'inline-flex' }}>
                                     <div style={{ width: 422 }}>
-                                        <Input readOnly size="lg" variant="bordered" color="success" type="text" value={multiSigInput} onChange={(e) => setMultiSigInput(e.target.value)} />
+                                        <Input readOnly size="lg" variant="bordered" color="primary" type="text" value={multiSigInput} onChange={(e) => setMultiSigInput(e.target.value)} />
                                     </div>
-                                    <Button color="success" variant="shadow" className="text-white" size="lg" onClick={inquiryHandler}>Inquiry</Button>
+                                    <Button color="primary" variant="shadow" className="text-black" size="lg" onClick={inquiryHandler}>Inquiry</Button>
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '20px' }}>
                                 <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
                                     <h3>Balance</h3>
                                     <div style={{ width: 211 }}>
-                                        <Input size="lg" variant="bordered" color="success" isReadOnly type="text" value={balance.toString()} endContent={
+                                        <Input size="lg" variant="bordered" color="primary" isReadOnly type="text" value={balance.toString()} endContent={
                                             <div className="pointer-events-none flex items-center">
                                                 <span className="text-default-400 text-small">KLAY</span>
                                             </div>
@@ -321,7 +321,7 @@ export default function ManageWallet() {
                                 <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
                                         <h3>Required Signatures</h3>
                                         <div style={{ width: 211 }}>
-                                            <Input size="lg" variant="bordered" color="success" isReadOnly type="text" value={requireSignatures.toString()} />
+                                            <Input size="lg" variant="bordered" color="primary" isReadOnly type="text" value={requireSignatures.toString()} />
                                         </div>
                                     </div>
                             </div>
@@ -330,7 +330,7 @@ export default function ManageWallet() {
                                 <div id="owners-container" style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 10, display: 'inline-flex' }}>
                                     {ownersInputs}
                                     {owners.length > 0 && (
-                                        <Button onPress={onOpenAddSignerModal} color="success" variant="shadow" className="text-white" >
+                                        <Button onPress={onOpenAddSignerModal} color="primary" variant="shadow" className="text-black" >
                                             Add new Signer
                                         </Button>
                                     )}
@@ -366,7 +366,7 @@ export default function ManageWallet() {
                                                         <Button color="default" variant="flat" onPress={onClose}>
                                                             Close
                                                         </Button>
-                                                        <Button color="success" variant="shadow" className="text-white" onPress={() => {
+                                                        <Button color="primary" variant="shadow" className="text-black" onPress={() => {
                                                             addSignerExeTx();
                                                             onClose();
                                                         }}>

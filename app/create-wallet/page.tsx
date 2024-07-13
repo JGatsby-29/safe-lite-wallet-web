@@ -67,7 +67,7 @@ export default function CreateWallet() {
     for (let i = 0; i < owners.length; i++) {
         ownerList.push(
             <li key={i}>
-                <Input style={{ width: 400 }} variant="bordered" color="success" label={`Signer ${i + 1}`} size="lg" id="multiSig" placeholder="Signer Address"
+                <Input style={{ width: 400 }} variant="bordered" color="primary" label={`Signer ${i + 1}`} size="lg" id="multiSig" placeholder="Signer Address"
                     {...i === 0 ? { readOnly: true } : {}}
                     type="text"
                     value={owners[i]}
@@ -94,7 +94,7 @@ export default function CreateWallet() {
                                 <ul style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 16, display: 'flex' }}>
                                     <h3>Owners</h3>
                                     <div style={{ justifyContent: 'flex-start', alignItems: 'flex-end', gap: 22, display: 'inline-flex' }}>
-                                        <Button color="success" variant="shadow" className="text-white" onClick={() => {
+                                        <Button color="primary" variant="shadow" className="text-black" onClick={() => {
                                             setOwners(owners.concat('' as `0x${string}`))
                                         }}>
                                             + Add new Signer
@@ -120,7 +120,7 @@ export default function CreateWallet() {
                                         }}
                                     />
                                 </ul>
-                                <Button onClick={createHandler} size="lg" color="success" variant="shadow" className="text-white">Create</Button>
+                                <Button onClick={createHandler} size="lg" color="primary" variant="shadow" className="text-black">Create</Button>
                             </div>
                             <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
                                 <h3>Multisig wallet address</h3>
