@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import { ethers } from "ethers";
 import { isAddress } from "web3-validator";
 import { useSafeLite } from "@/hooks/useSafeLite";
-import { Input, Button } from "@nextui-org/react";
+import { Input, Button, User } from "@nextui-org/react";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@nextui-org/react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@nextui-org/react";
 import { Card, CardHeader, CardBody, CardFooter, Divider, Link, Image } from "@nextui-org/react";
@@ -42,6 +42,9 @@ export default function ManageWallet() {
     const [transactions, setTransactions] = useState<never[]>([]);
     const addressBook = '0x28A56395523AA1feEf1CAc427FbfA5E8b4767F91';
     const { selectedWallet, setSelectedWallet } = useWallet();
+    const [currentTransaction, setCurrentTransaction] = useState<[string, ethers.BigNumber, string, boolean, ethers.BigNumber, ethers.BigNumber] | null>(null);
+    const [hasSignedCheck, setHasSignedCheck] = useState<boolean>(false);
+    const [latestNonce, setLatestNonce] = useState(0);
 
     useEffect(() => {
         setMultiSigInput(selectedWallet);
@@ -93,7 +96,7 @@ export default function ManageWallet() {
                 address: multiSigInput as `0x${string}`,
                 functionName: 'getTransaction',
                 args: [i],
-            }) as [string, ethers.BigNumber, string, boolean, ethers.BigNumber];
+            }) as [string, ethers.BigNumber, string, boolean, ethers.BigNumber, ethers.BigNumber, boolean];
             if (transaction[0] !== '0x0000000000000000000000000000000000000000') {
                 txs.push(transaction as never);
             }
@@ -101,6 +104,8 @@ export default function ManageWallet() {
 
         console.log("Transaction info: ", txs);
         setTransactions(txs);
+        setLatestNonce(nonce);
+        UserhasSigned();
     };
 
     const ownersInputs = owners.map((owner, index) => (
@@ -138,19 +143,11 @@ export default function ManageWallet() {
             args: [Number(nonce), multiSigInput, 0, data],
         }) as `0x${string}`
 
-        const signatureCount = await readContract(config, {
-            abi: safeLiteAbi.abi,
-            address: multiSigInput as `0x${string}`,
-            functionName: 'getSignatureCount',
-            args: [Number(nonce)],
-        });
-        console.log("signatureCount is: ", signatureCount);
-
         const signature = await walletClient?.signMessage({
             message: { raw: hash },
         });
 
-        const executeTransaction = await walletClient?.writeContract({
+        await walletClient?.writeContract({
             abi: safeLiteAbi.abi,
             address: multiSigInput as `0x${string}`,
             functionName: 'signTransaction',
@@ -160,6 +157,7 @@ export default function ManageWallet() {
                 0,
                 data,
                 signature,
+                true
             ],
         });
     };
@@ -185,19 +183,11 @@ export default function ManageWallet() {
             args: [Number(nonce), multiSigInput, 0, data],
         }) as `0x${string}`
 
-        const signatureCount = await readContract(config, {
-            abi: safeLiteAbi.abi,
-            address: multiSigInput as `0x${string}`,
-            functionName: 'getSignatureCount',
-            args: [Number(nonce)],
-        });
-        console.log("signatureCount is: ", signatureCount);
-
         const signature = await walletClient?.signMessage({
             message: { raw: hash },
         });
 
-        const executeTransaction = await walletClient?.writeContract({
+        await walletClient?.writeContract({
             abi: safeLiteAbi.abi,
             address: multiSigInput as `0x${string}`,
             functionName: 'signTransaction',
@@ -207,6 +197,7 @@ export default function ManageWallet() {
                 0,
                 data,
                 signature,
+                true
             ],
         });
     };
@@ -223,10 +214,10 @@ export default function ManageWallet() {
         }
     };
 
-    const getCardBodyContent = (transaction: [string, ethers.BigNumber, string, boolean, ethers.BigNumber]): JSX.Element => {
+    const getCardBodyContent = (transaction: [string, ethers.BigNumber, string, boolean, ethers.BigNumber, ethers.BigNumber]): JSX.Element => {
         const data = transaction[2];
-        console.log(transaction[2])
-
+        const approvalCount = transaction[4];
+        const rejectionCount = transaction[5];
 
         if (typeof data === "string" && data === "0x") {
             return (
@@ -234,6 +225,10 @@ export default function ManageWallet() {
                     To : {transaction[0]}
                     <br />
                     Value : {ethers.utils.formatEther(transaction[1])} KLAY
+                    <br />
+                    Approvals: {approvalCount.toString()}
+                    <br />
+                    Rejections: {rejectionCount.toString()}
                 </p>
             );
         } else if (typeof data === "string" && data.startsWith("0x65af1bed")) {
@@ -242,7 +237,11 @@ export default function ManageWallet() {
                 <p>
                     To : {signerAddress}
                     <br />
-                    New Required Singature Count : {transaction[2].slice(-1)}
+                    New Required Signature Count : {transaction[2].slice(-1)}
+                    <br />
+                    Approvals: {approvalCount.toString()}
+                    <br />
+                    Rejections: {rejectionCount.toString()}
                 </p>
             );
         } else if (typeof data === "string" && data.startsWith("0x3bad5426")) {
@@ -251,37 +250,85 @@ export default function ManageWallet() {
                 <p>
                     To : {signerAddress}
                     <br />
-                    New Required Singature Counts : {transaction[2].slice(-1)}
+                    New Required Signature Counts : {transaction[2].slice(-1)}
+                    <br />
+                    Approvals: {approvalCount.toString()}
+                    <br />
+                    Rejections: {rejectionCount.toString()}
                 </p>
             );
         } else {
-            return <p>Data: {data}</p>;
+            return (
+                <p>
+                    Data: {data}
+                    <br />
+                    Approvals: {approvalCount.toString()}
+                    <br />
+                    Rejections: {rejectionCount.toString()}
+                </p>
+            );
         }
     };
 
     const router = useRouter();
 
-    const handleAddSignerModalOpen = (transaction: [string, ethers.BigNumber, string, boolean, ethers.BigNumber]) => {
-        const signerAddress = `0x${transaction[2].slice(34, 74)}`;
-        const threshold = transaction[2].slice(-1);
-        setNewSigner(signerAddress);
-        setNewThreshold(threshold);
-        onOpenAddSignerModal();
+    const handleSignTransaction = async (transaction: [string, ethers.BigNumber, string, boolean, ethers.BigNumber, ethers.BigNumber], isApproved: boolean) => {
+        const [to, value, data] = transaction;
+
+        const nonce = await readContract(config, {
+            abi: safeLiteAbi.abi,
+            address: multiSigInput as `0x${string}`,
+            functionName: 'nonce',
+            args: [],
+        });
+
+        const hash = await readContract(config, {
+            abi: safeLiteAbi.abi,
+            address: multiSigInput as `0x${string}`,
+            functionName: 'getTransactionHash',
+            args: [Number(nonce), to, value, data],
+        }) as `0x${string}`;
+
+        const signaturePromise = walletClient?.signMessage({
+            message: { raw: hash },
+        });
+        const signature = await signaturePromise;
+
+        await walletClient?.writeContract({
+            abi: safeLiteAbi.abi,
+            address: multiSigInput as `0x${string}`,
+            functionName: 'signTransaction',
+            args: [
+                Number(nonce),
+                to,
+                value,
+                data,
+                signature,
+                isApproved
+            ],
+        });
+
+        await inquiryHandler();
     };
 
-    const handleRemoveSignerModalOpen = (transaction: [string, ethers.BigNumber, string, boolean, ethers.BigNumber]) => {
-        const signerAddress = `0x${transaction[2].slice(34, 74)}`;
-        const threshold = transaction[2].slice(-1);
-        setExistingSigner(signerAddress);
-        setRemoveThreshold(threshold);
-        onOpenRemoveSignerModal();
-    };
+    const UserhasSigned = async () => {
+        const nonce = Number(await readContract(config, {
+            abi: safeLiteAbi.abi,
+            address: multiSigInput as `0x${string}`,
+            functionName: 'nonce',
+            args: [],
+        }));
 
-    const handleSendTokenRedirect = (to: string, value: ethers.BigNumber) => {
-        const toAddress = to;
-        const tokenValue = ethers.utils.formatEther(value);
-        router.push(`/send-token?to=${toAddress}&value=${tokenValue}`);
-    };
+        const hasSigned = await readContract(config, {
+            abi: safeLiteAbi.abi,
+            address: multiSigInput as `0x${string}`,
+            functionName: 'hasSigned',
+            args: [nonce, address],
+        }) as boolean;
+
+        console.log("hasSignedCheck : ", hasSignedCheck );
+        setHasSignedCheck(hasSigned);
+    }
 
     const onCloseAddSignerModalHandler = () => {
         setNewSigner('');
@@ -302,7 +349,7 @@ export default function ManageWallet() {
                                 <h3>Multisig wallet address</h3>
                                 <div style={{ justifyContent: 'flex-start', alignItems: 'flex-end', gap: 22, display: 'inline-flex' }}>
                                     <div style={{ width: 422 }}>
-                                        <Input readOnly size="lg" variant="bordered" color="primary" type="text" value={multiSigInput} onChange={(e) => setMultiSigInput(e.target.value)} />
+                                        <Input size="lg" variant="bordered" color="primary" type="text" value={multiSigInput} onChange={(e) => setMultiSigInput(e.target.value)} />
                                     </div>
                                     <Button color="primary" variant="shadow" className="text-black" size="lg" onClick={inquiryHandler}>Inquiry</Button>
                                 </div>
@@ -319,11 +366,11 @@ export default function ManageWallet() {
                                     </div>
                                 </div>
                                 <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
-                                        <h3>Required Signatures</h3>
-                                        <div style={{ width: 211 }}>
-                                            <Input size="lg" variant="bordered" color="primary" isReadOnly type="text" value={requireSignatures.toString()} />
-                                        </div>
+                                    <h3>Required Signatures</h3>
+                                    <div style={{ width: 211 }}>
+                                        <Input size="lg" variant="bordered" color="primary" isReadOnly type="text" value={requireSignatures.toString()} />
                                     </div>
+                                </div>
                             </div>
                             <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
                                 <h3>Owners</h3>
@@ -424,35 +471,6 @@ export default function ManageWallet() {
                             </div>
                             <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 40, display: 'flex', marginBottom: "200px" }}>
                                 <h3>Transaction Info</h3>
-                                {/*
-                                <Table
-                                    color="success"
-                                    selectionMode="single"
-                                    aria-label="Transaction Info Table">
-                                    <TableHeader>
-                                        <TableColumn>Transaction ID</TableColumn>
-                                        <TableColumn>To</TableColumn>
-                                        <TableColumn>Value</TableColumn>
-                                        <TableColumn>Data</TableColumn>
-                                        <TableColumn>Executed</TableColumn>
-                                        <TableColumn>Signature Count</TableColumn>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {transactions.map((transaction, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell>{index}</TableCell>
-                                                <TableCell>{transaction[0]}</TableCell>
-                                                <TableCell>{ethers.utils.formatEther(transaction[1])} KLAY</TableCell>
-                                                <TableCell style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    {transaction[2]}
-                                                </TableCell>
-                                                <TableCell>{transaction[3] ? "Yes" : "No"}</TableCell>
-                                                <TableCell>{Number(transaction[4])}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                                */}
                                 <div className="cards-container">
                                     {transactions.map((transaction, index) => (
                                         <Card key={index} className="max-w-[400px]">
@@ -469,7 +487,7 @@ export default function ManageWallet() {
                                                 </div>
                                             </CardHeader>
                                             <Divider />
-                                            <CardBody style={{ fontSize: '14px'}}>
+                                            <CardBody style={{ fontSize: '14px' }}>
                                                 {getCardBodyContent(transaction)}
                                             </CardBody>
                                             <Divider />
@@ -479,47 +497,35 @@ export default function ManageWallet() {
                                                         isBlock
                                                         isExternal
                                                         showAnchorIcon
-                                                        color="success"
+                                                        color="primary"
                                                         href={`https://baobab.klaytnscope.com/account/${multiSigInput}?tabId=internalTx`}>
                                                         Transaction Executed
                                                     </Link>
                                                 ) : (
                                                     <>
-                                                        {getTransactionType(transaction[2]) === "Add Signer" && (
+                                                        {transaction[6] ? (
                                                             <Link
                                                                 isBlock
-                                                                isExternal
-                                                                showAnchorIcon
-                                                                color="danger"
-                                                                onClick={() => handleAddSignerModalOpen(transaction)}
-                                                                style={{ cursor: 'pointer' }}
-                                                            >
-                                                                Transaction Not Executed, Go To Sign
+                                                                color="danger">
+                                                                Transaction Rejected
                                                             </Link>
-                                                        )}
-                                                        {getTransactionType(transaction[2]) === "Remove Signer" && (
-                                                            <Link
-                                                                isBlock
-                                                                isExternal
-                                                                showAnchorIcon
-                                                                color="danger"
-                                                                onClick={() => handleRemoveSignerModalOpen(transaction)}
-                                                                style={{ cursor: 'pointer' }}
-                                                            >
-                                                                Transaction Not Executed, Go To Sign
-                                                            </Link>
-                                                        )}
-                                                        {getTransactionType(transaction[2]) === "Send Token" && (
-                                                            <Link
-                                                                isBlock
-                                                                isExternal
-                                                                showAnchorIcon
-                                                                color="danger"
-                                                                onClick={() => handleSendTokenRedirect(transaction[0], transaction[1])}
-                                                                style={{ cursor: 'pointer' }}
-                                                            >
-                                                                Transaction Not Executed, Go To Send Token
-                                                            </Link>
+                                                        ) : (
+                                                            <>
+                                                                {hasSignedCheck ? (
+                                                                    <Link isBlock color="primary">
+                                                                        You have already signed this transaction
+                                                                    </Link>
+                                                                ) : (
+                                                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                                                        <Button color="primary" variant="shadow" className="text-black" onPress={() => handleSignTransaction(transaction, true)}>
+                                                                            Approve
+                                                                        </Button>
+                                                                        <Button color="danger" variant="shadow" className="text-white" onPress={() => handleSignTransaction(transaction, false)}>
+                                                                            Reject
+                                                                        </Button>
+                                                                    </div>
+                                                                )}
+                                                            </>
                                                         )}
                                                     </>
                                                 )}

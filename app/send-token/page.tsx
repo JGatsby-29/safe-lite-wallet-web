@@ -41,30 +41,7 @@ export default function ExecuteTx() {
         setMultiSig(selectedWallet);
     }, [selectedWallet]);
 
-    const signTxHandler = async () => {
-        const nonce = await readContract(config, {
-            abi: safeLiteAbi.abi,
-            address: multiSigInput as `0x${string}`,
-            functionName: 'nonce',
-            args: [],
-        });
-
-        const hash = await readContract(config, {
-            abi: safeLiteAbi.abi,
-            address: multiSigInput as `0x${string}`,
-            functionName: 'getTransactionHash',
-            args: [Number(nonce), toInput, ethers.utils.parseEther(valueInput), ""],
-        }) as `0x${string}`
-
-        const signaturePromise = walletClient?.signMessage({
-            message: { raw: hash },
-        });
-        const signature = await signaturePromise;
-
-        setSignature(signature || "");
-    };
-
-    const executeTxHandler = async () => {
+    const signTxHandler = async (isApproved: boolean) => {
         const nonce = await readContract(config, {
             abi: safeLiteAbi.abi,
             address: multiSigInput as `0x${string}`,
@@ -80,19 +57,11 @@ export default function ExecuteTx() {
             args: [Number(nonce), toInput, ethers.utils.parseEther(valueInput), ""],
         }) as `0x${string}`
 
-        const signatureCount = await readContract(config, {
-            abi: safeLiteAbi.abi,
-            address: multiSigInput as `0x${string}`,
-            functionName: 'getSignatureCount',
-            args: [Number(nonce)],
-        });
-        console.log("signatureCount is: ", signatureCount);
-
         const signature = await walletClient?.signMessage({
             message: { raw: hash },
         });
 
-        const executeTransaction = await walletClient?.writeContract({
+        await walletClient?.writeContract({
             abi: safeLiteAbi.abi,
             address: multiSigInput as `0x${string}`,
             functionName: 'signTransaction',
@@ -102,9 +71,14 @@ export default function ExecuteTx() {
                 ethers.utils.parseEther(valueInput),
                 "",
                 signature,
+                isApproved
             ],
         });
     };
+
+    const executeTxHandler = async () => {
+        await signTxHandler(true);
+    }
 
     return (
         <div style={{ backgroundColor: '#121312', minHeight: '100vh' }}>
