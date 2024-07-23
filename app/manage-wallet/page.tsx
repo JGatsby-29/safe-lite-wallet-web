@@ -180,7 +180,7 @@ export default function ManageWallet() {
             message: { raw: hash },
         });
 
-        await walletClient?.writeContract({
+        const txResponse = await walletClient?.writeContract({
             abi: safeLiteAbi.abi,
             address: multiSigInput as `0x${string}`,
             functionName: 'signTransaction',
@@ -194,6 +194,7 @@ export default function ManageWallet() {
             ],
         });
 
+        setTxHash(txResponse);
     };
 
     const removeSignerExeTx = async () => {
@@ -226,7 +227,7 @@ export default function ManageWallet() {
             message: { raw: hash },
         });
 
-        await walletClient?.writeContract({
+        const txResponse = await walletClient?.writeContract({
             abi: safeLiteAbi.abi,
             address: multiSigInput as `0x${string}`,
             functionName: 'signTransaction',
@@ -239,6 +240,8 @@ export default function ManageWallet() {
                 true
             ],
         });
+
+        setTxHash(txResponse);
     };
 
     const getTransactionType = (data: string): string => {
