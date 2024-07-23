@@ -17,16 +17,18 @@ import { Card, CardHeader, CardBody, CardFooter, Divider, Link, Image } from "@n
 import { useWallet } from "@/app/walletContext";
 
 import TrashIcon from "@/public/icon_trash.svg";
+import { constrainedMemory } from "process";
 
 export default function ManageWallet() {
     const { address } = useAccount();
-    const { data: walletClient, isError, isLoading } = useWalletClient()
+    const { data: walletClient} = useWalletClient()
     const [safeLiteDeployTxHash, setSafeLiteDeployTxHash] = useState('')
-    const result = useWaitForTransactionReceipt({
-        hash: safeLiteDeployTxHash as `0x${string}`,
-    })
+    const [txHash, setTxHash] = useState<`0x${string}`>();
+    const { data, isError, isLoading, isSuccess } = useWaitForTransactionReceipt({
+        hash: txHash as `0x${string}`,
+    });
+
     const [owners, setOwners] = useState<`0x${string}`[]>([])
-    const safeLite = useSafeLite(result?.data?.contractAddress ? result?.data?.contractAddress : undefined)
     const safeLiteWallet = useSafeLite()
     const [multiSigInput, setMultiSigInput] = useState('');
 
@@ -50,7 +52,41 @@ export default function ManageWallet() {
         setMultiSigInput(selectedWallet);
     }, [selectedWallet]);
 
+    useEffect(() => {
+        if (address && isAddress(multiSigInput)) {
+            inquiryHandler();
+        }
+    }, [address, multiSigInput]);
+
+    useEffect(() => {
+        if (isLoading) {
+            console.log('Processing transaction...');
+        }
+
+        if (isError) {
+            alert('Transaction failed');
+        }
+
+        if (isSuccess) {
+            console.log('Transaction processed successfully');
+            inquiryHandler();
+        }
+    }, [isLoading, isError, isSuccess]);
+
     const inquiryHandler = async () => {
+        const owners = await readContract(config, {
+            abi: safeLiteAbi.abi,
+            address: multiSigInput as `0x${string}`,
+            functionName: 'getOwners',
+            args: [],
+        }) as `0x${string}`[];
+
+        if (!owners.includes(address as `0x${string}`)) {
+            alert("You are not an owner of this multi-signature wallet.");
+            return;
+        }
+        
+        setOwners(owners);
         const balance = await readContract(config, {
             abi: safeLiteAbi.abi,
             address: multiSigInput as `0x${string}`,
@@ -70,16 +106,6 @@ export default function ManageWallet() {
             args: [],
         });
         setRequiredSignatures(Number(requireSignatures));
-
-        const owners = await readContract(config, {
-            abi: safeLiteAbi.abi,
-            address: multiSigInput as `0x${string}`,
-            functionName: 'getOwners',
-            args: [],
-        }) as `0x${string}`[];
-
-        console.log(owners);
-        setOwners(owners);
 
         const nonce = Number(await readContract(config, {
             abi: safeLiteAbi.abi,
@@ -108,6 +134,8 @@ export default function ManageWallet() {
         UserhasSigned();
     };
 
+    console.log('transactions :', transactions);
+
     const ownersInputs = owners.map((owner, index) => (
         <div key={index} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 422 }}>
@@ -123,6 +151,11 @@ export default function ManageWallet() {
     ));
 
     const addSignerExeTx = async () => {
+        if (!owners.includes(address as `0x${string}`)) {
+            alert("You are not an owner of this multi-signature wallet.");
+            return;
+        }
+
         const nonce = await readContract(config, {
             abi: safeLiteAbi.abi,
             address: multiSigInput as `0x${string}`,
@@ -160,9 +193,15 @@ export default function ManageWallet() {
                 true
             ],
         });
+
     };
 
     const removeSignerExeTx = async () => {
+        if (!owners.includes(address as `0x${string}`)) {
+            alert("You are not an owner of this multi-signature wallet.");
+            return;
+        }
+
         const nonce = await readContract(config, {
             abi: safeLiteAbi.abi,
             address: multiSigInput as `0x${string}`,
@@ -273,6 +312,11 @@ export default function ManageWallet() {
     const router = useRouter();
 
     const handleSignTransaction = async (transaction: [string, ethers.BigNumber, string, boolean, ethers.BigNumber, ethers.BigNumber], isApproved: boolean) => {
+        if (!owners.includes(address as `0x${string}`)) {
+            alert("You are not an owner of this multi-signature wallet.");
+            return;
+        }
+        
         const [to, value, data] = transaction;
 
         const nonce = await readContract(config, {
@@ -294,7 +338,7 @@ export default function ManageWallet() {
         });
         const signature = await signaturePromise;
 
-        await walletClient?.writeContract({
+        const txResponse = await walletClient?.writeContract({
             abi: safeLiteAbi.abi,
             address: multiSigInput as `0x${string}`,
             functionName: 'signTransaction',
@@ -308,7 +352,8 @@ export default function ManageWallet() {
             ],
         });
 
-        await inquiryHandler();
+        console.log("txResponse : ", txResponse);
+        setTxHash(txResponse);
     };
 
     const UserhasSigned = async () => {
@@ -326,7 +371,7 @@ export default function ManageWallet() {
             args: [nonce, address],
         }) as boolean;
 
-        console.log("hasSignedCheck : ", hasSignedCheck );
+        console.log("hasSignedCheck : ", hasSignedCheck);
         setHasSignedCheck(hasSigned);
     }
 
