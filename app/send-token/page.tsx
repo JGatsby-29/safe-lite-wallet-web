@@ -93,7 +93,7 @@ export default function ExecuteTx() {
                                 <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 40, display: 'inline-flex' }}>
                                     <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
                                         <div style={{ width: 400, color: 'white', fontSize: 24, fontFamily: 'Outfit', fontWeight: '400', wordWrap: 'break-word' }}>MultiSig Wallet Address</div>
-                                        <Input readOnly variant="bordered" color="primary" type="text" label="Multisig" size="lg" id="multiSig" value={multiSigInput} onChange={(e) => setMultiSig(e.target.value)} placeholder="your multisig wallet address" style={{ width: '100%' }} />
+                                        <Input variant="bordered" color="primary" type="text" label="Multisig" size="lg" id="multiSig" value={multiSigInput} onChange={(e) => setMultiSig(e.target.value)} placeholder="your multisig wallet address" style={{ width: '100%' }} />
                                     </div>
                                     <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 60, display: 'flex' }}>
                                         <div style={{ flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 20, display: 'flex' }}>
