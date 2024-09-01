@@ -14,7 +14,7 @@ import { useSafeLite } from "@/hooks/useSafeLite";
 import { Input, Button } from "@nextui-org/react";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@nextui-org/react";
 import Image from "next/image";
-import Logo from "@/public/kaia_safe_lite_main3.png";
+import Logo from "@/public/kaia_safe_lite_main4.png";
 import { useWallet } from "@/app/walletContext";
 
 export default function Home() {
@@ -75,7 +75,7 @@ export default function Home() {
   return (
     <div style={{ width: '100%', height: '500px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#121312', minHeight: '100vh' }}>
       <div title="logo_box" style={{ width: '50%', height: '100%', marginRight: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Image src={Logo} alt="logo" width={460} height={420} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+        <Image src={Logo} alt="logo" width={460} height={612} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
       </div>
       <div style={{ width: '50%', height: '85%', backgroundColor: '#1c1c1c', borderRadius: '16px', marginRight: '70px' }}>
         <div title="wallet_box" style={{ width: '100%', height: '100%', paddingLeft: 60, paddingRight: 60, paddingTop: 40, paddingBottom: 40, background: '#1C1C1C', borderRadius: 10, overflow: 'hidden', border: '1px #303033 solid', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 20, display: 'flex' }}>
