@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 import { isAddress } from "web3-validator";
 import { useSafeLite } from "@/hooks/useSafeLite";
 import { Input, Button, Image } from "@nextui-org/react";
+import { useRouter } from 'next/navigation';
+import { useWallet } from "@/app/walletContext";
 
 export default function CreateWallet() {
     const { data: walletClient, isError, isLoading } = useWalletClient()
@@ -19,6 +21,17 @@ export default function CreateWallet() {
     const safeLite = useSafeLite(result?.data?.contractAddress ? result?.data?.contractAddress : undefined)
     const safeLiteWallet = useSafeLite()
     const { writeContract } = useWriteContract();
+
+    const router = useRouter();
+    const { setSelectedWallet } = useWallet();
+
+    useEffect(() => {
+        if (result.isFetched && result.status === 'success' && safeLite) {
+            setSelectedWallet(safeLite); // 생성된 지갑 주소 저장
+        } else if (result.isFetched && result.status !== 'success') {
+            alert('Wallet Creation failed');
+        }
+    }, [result, safeLite, setSelectedWallet, router]);
 
     const createHandler = async () => {
         let invalidAddr = ''
@@ -43,12 +56,6 @@ export default function CreateWallet() {
             })
             setSafeLiteDeployTxHash(contract ? contract : '')
 
-            if (result.isFetched && result?.status !== 'success') {
-                alert('Wallet Creation failed' + result?.error)
-            }
-            if (result.isFetched && result?.status == 'success') {
-                alert('Wallet Creation succeed' + result?.error)
-            }
         } catch (error) {
             console.error('Error:', error)
             alert('Wallet creation or recording failed')
